@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
 
+const DEFAULT_SHIPPING_CHARGE = 50.00; // Default shipping charge
+const GST_RATE = 0.18; // GST rate of 18%
+
 const orderSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -17,10 +20,9 @@ const orderSchema = new mongoose.Schema({
     },
   }],
   shippingAddress: {
-    address: { type: String, required: true },
-    city: { type: String, required: true },
-    postalCode: { type: String, required: true },
-    country: { type: String, required: true },
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Address',
+    required: true,
   },
   paymentMethod: {
     type: String,
@@ -39,6 +41,12 @@ const orderSchema = new mongoose.Schema({
       required: true,
     },
   },
+  paymentResult: {
+    id: { type: String },
+    status: { type: String },
+    update_time: { type: String },
+    email_address: { type: String },
+  },
   itemsPrice: {
     type: Number,
     required: true,
@@ -52,7 +60,7 @@ const orderSchema = new mongoose.Schema({
   shippingPrice: {
     type: Number,
     required: true,
-    default: 0.0,
+    default: DEFAULT_SHIPPING_CHARGE,
   },
   totalPrice: {
     type: Number,
@@ -79,6 +87,13 @@ const orderSchema = new mongoose.Schema({
 }, {
   timestamps: true,
 });
+
+// Method to calculate and set prices including tax and shipping
+orderSchema.methods.calculatePrices = function() {
+  this.itemsPrice = this.orderItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  this.taxPrice = this.itemsPrice * GST_RATE;
+  this.totalPrice = this.itemsPrice + this.taxPrice + this.shippingPrice;
+};
 
 const Order = mongoose.model('Order', orderSchema);
 
